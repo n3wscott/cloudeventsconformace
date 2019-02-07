@@ -17,7 +17,7 @@ type envConfig struct {
 	Port string `envconfig:"PORT" default:"8081"`
 
 	// Target where to send received event back to
-	Target string `envconfig:"TARGET" default:"http://localhost:8080x" required:"true"`
+	Target string `envconfig:"TARGET" default:"http://localhost:8080" required:"true"`
 }
 
 func main() {
@@ -31,7 +31,9 @@ func main() {
 }
 
 type Loopback struct {
-	ce *cloudevents.Client
+	ce0 *cloudevents.Client
+	ce1 *cloudevents.Client
+	i   int
 }
 
 func (e *Loopback) handler(ctx context.Context, msg json.RawMessage) {
@@ -40,17 +42,31 @@ func (e *Loopback) handler(ctx context.Context, msg json.RawMessage) {
 
 	log.Printf("Message: %s", string(msg))
 
-	if err := e.ce.Send(msg); err != nil {
-		log.Printf("failed to send cloudevent: %s\n", err)
+	if e.i%2 == 0 {
+		if err := e.ce0.Send(msg); err != nil {
+			log.Printf("failed to send cloudevent: %s\n", err)
+		}
+	} else {
+		if err := e.ce1.Send(msg); err != nil {
+			log.Printf("failed to send cloudevent: %s\n", err)
+		}
 	}
+	e.i++
 }
 
 func _main(args []string, env envConfig) int {
 	e := &Loopback{
-		ce: cloudevents.NewClient(env.Target, cloudevents.Builder{
+		ce0: cloudevents.NewClient(env.Target, cloudevents.Builder{
 			EventTypeVersion: "v1alpha1",
 			EventType:        events.ResponseEventType,
 			Source:           "n3wscott.loopback",
+			Encoding:         cloudevents.StructuredV01,
+		}),
+		ce1: cloudevents.NewClient(env.Target, cloudevents.Builder{
+			EventTypeVersion: "v1alpha1",
+			EventType:        events.ResponseEventType,
+			Source:           "n3wscott.loopback",
+			Encoding:         cloudevents.BinaryV01,
 		}),
 	}
 

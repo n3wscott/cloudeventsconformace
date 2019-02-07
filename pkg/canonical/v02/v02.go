@@ -1,7 +1,8 @@
-package v01
+package v02
 
 import (
 	"fmt"
+	"github.com/n3wscott/cloudeventsconformace/pkg/canonical/http"
 	"strings"
 )
 
@@ -11,7 +12,7 @@ type URI string
 type URIRef string
 type Timestamp string
 type Map map[String]Any
-type Any String // Map, String, Binary, or Integer
+type Any []byte // Map, String, Binary, or Integer
 type Binary []byte
 
 // Integer - A 32-bit whole number.
@@ -76,7 +77,12 @@ type Message struct {
 	// Everything else is an extension.
 }
 
-func PrintMessage(b *strings.Builder, m Message) {
+func Parse(r http.Request) Message {
+	// TODO
+	return Message{}
+}
+
+func (m Message) Print(b *strings.Builder) {
 	b.WriteString(fmt.Sprintf("type: %v\n", m.event_type))
 	b.WriteString(fmt.Sprintf("specversion: %v\n", m.specversion))
 	b.WriteString(fmt.Sprintf("source: %v\n", m.source))

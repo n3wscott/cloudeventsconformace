@@ -2,18 +2,15 @@ package v01
 
 import (
 	"fmt"
+	"github.com/n3wscott/cloudeventsconformace/pkg/canonical/http"
 	"strings"
 )
-
-func Print(b *strings.Builder, envelope interface{}, data interface{}) {
-	PrintMessage(b, Message{})
-}
 
 type String string
 type URI string
 type Timestamp string
 type Map map[String]Object
-type Object String // Map, String, or Binary
+type Object []byte // Map, String, or Binary
 type Binary []byte
 
 // String - Sequence of printable Unicode characters.
@@ -71,7 +68,7 @@ type Message struct {
 	data               Object    // +optional
 }
 
-func PrintMessage(b *strings.Builder, m Message) {
+func (m Message) Print(b *strings.Builder) {
 	b.WriteString(fmt.Sprintf("eventType: %v\n", m.eventType))
 	b.WriteString(fmt.Sprintf("eventTypeVersion: %v\n", m.eventTypeVersion))
 	b.WriteString(fmt.Sprintf("cloudEventsVersion: %v\n", m.cloudEventsVersion))
@@ -82,6 +79,36 @@ func PrintMessage(b *strings.Builder, m Message) {
 	b.WriteString(fmt.Sprintf("contentType: %v\n", m.contentType))
 	b.WriteString(fmt.Sprintf("extensions: %v\n", m.extensions))
 	b.WriteString(fmt.Sprintf("data: %v\n", m.data))
+}
+
+func Parse(r http.Request) Message {
+	contentType := r.Header.Get("content-type")
+	if strings.HasPrefix(contentType, "application/cloudevents+json") {
+		return StructuredParse(r)
+	} else if strings.HasPrefix(contentType, "application/json") {
+		return BinaryParse(r)
+	}
+	return Message{}
+}
+
+func BinaryParse(r http.Request) Message {
+	return Message{
+		eventType:          String(r.Header.Get("ce-eventType")),
+		eventTypeVersion:   String(r.Header.Get("ce-eventTypeVersion")),
+		cloudEventsVersion: String(r.Header.Get("ce-cloudEventsVersion")),
+		source:             URI(r.Header.Get("ce-source")),
+		eventID:            String(r.Header.Get("ce-eventID")),
+		eventTime:          Timestamp(r.Header.Get("ce-eventTime")),
+		schemaURL:          URI(r.Header.Get("ce-schemaURL")),
+		contentType:        String(r.Header.Get("ce-contentType")),
+		// extensions: r.Header.Get("extensions"), TODO
+		data: r.Body,
+	}
+}
+
+func StructuredParse(r http.Request) Message {
+	// TODO
+	return Message{}
 }
 
 /*
